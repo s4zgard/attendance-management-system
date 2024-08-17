@@ -1,0 +1,8 @@
+{
+  "name": "attendance-management-system",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/s4zgard/attendance-management-system",
+  "author": "Sajjad Ahmed <s4zgard@gmail.com>",
+  "license": "MIT"
+}
