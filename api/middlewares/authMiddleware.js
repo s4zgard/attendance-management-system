@@ -1,8 +1,7 @@
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
-import asyncHandler from "./asyncHandler.js";
 
-export const protect = asyncHandler(async (req, res, next) => {
+export const protect = async (req, res, next) => {
   const token = req.cookies.amsJwt;
 
   if (!token) {
@@ -24,7 +23,7 @@ export const protect = asyncHandler(async (req, res, next) => {
     res.status(401);
     throw new Error("Not authorized, token failed");
   }
-});
+};
 
 export const adminOnly = (req, res, next) => {
   if (!req.user || req.user.role !== "admin") {
