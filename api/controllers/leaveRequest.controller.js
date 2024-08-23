@@ -1,14 +1,15 @@
+import moment from "moment";
 import LeaveRequest from "../models/leaveRequest.model.js";
+import Attendance from "../models/attendance.model.js";
 
 // Create a new leave request
 export const createLeaveRequest = async (req, res) => {
-  const { startDate, endDate, reason } = req.body;
+  const { date, reason } = req.body;
 
   try {
     const leaveRequest = new LeaveRequest({
-      user: req.user._id,
-      startDate,
-      endDate,
+      user: req.user.id,
+      date: moment(date).toDate(),
       reason,
     });
 
@@ -16,8 +17,7 @@ export const createLeaveRequest = async (req, res) => {
 
     res.status(201).json(createdLeaveRequest);
   } catch (error) {
-    res.status(500);
-    throw new Error("Failed to create leave request.");
+    res.status(500).json({ message: "Failed to create leave request." });
   }
 };
 
@@ -28,8 +28,25 @@ export const getMyLeaveRequests = async (req, res) => {
 
     res.status(200).json(leaveRequests);
   } catch (error) {
-    res.status(500);
-    throw new Error("Failed to retrieve leave requests.");
+    res.status(500).json({ message: "Failed to retrieve leave requests." });
+  }
+};
+
+// Get a leave request by ID
+export const getLeaveRequestById = async (req, res) => {
+  try {
+    const leaveRequest = await LeaveRequest.findById(req.params.id).populate(
+      "user",
+      "name email"
+    );
+
+    if (!leaveRequest) {
+      return res.status(404).json({ message: "Leave request not found." });
+    }
+
+    res.status(200).json(leaveRequest);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to retrieve leave request." });
   }
 };
 
@@ -41,10 +58,9 @@ export const getAllLeaveRequests = async (req, res) => {
       "name email"
     );
 
-    res.status(200).json(leaveRequests);
+    res.status(200).json({ leaveRequests });
   } catch (error) {
-    res.status(500);
-    throw new Error("Failed to retrieve leave requests.");
+    res.status(500).json({ message: "Failed to retrieve leave requests." });
   }
 };
 
@@ -56,17 +72,50 @@ export const updateLeaveRequestStatus = async (req, res) => {
     const leaveRequest = await LeaveRequest.findById(req.params.id);
 
     if (!leaveRequest) {
-      res.status(404);
-      throw new Error("Leave request not found.");
+      return res.status(404).json({ message: "Leave request not found." });
     }
 
+    // Update the leave request status
     leaveRequest.status = status;
     const updatedLeaveRequest = await leaveRequest.save();
 
+    // If the leave request is approved, update attendance records
+    if (status === "Approved") {
+      const { user, startDate, endDate } = leaveRequest;
+
+      // Convert startDate and endDate to moments
+      const start = moment(startDate).startOf("day");
+      const end = moment(endDate).endOf("day");
+
+      // Loop through each day in the leave period
+      for (let date = start; date.isBefore(end); date.add(1, "days")) {
+        const existingAttendance = await Attendance.findOne({
+          user,
+          date: {
+            $gte: date.toDate(),
+            $lt: date.clone().endOf("day").toDate(),
+          },
+        });
+
+        if (existingAttendance) {
+          // If attendance exists, update it to "Leave"
+          existingAttendance.status = "Leave";
+          await existingAttendance.save();
+        } else {
+          // If no attendance exists, create a new "Leave" record
+          const newAttendance = new Attendance({
+            user,
+            date: date.toDate(),
+            status: "Leave",
+          });
+          await newAttendance.save();
+        }
+      }
+    }
+
     res.status(200).json(updatedLeaveRequest);
   } catch (error) {
-    res.status(500);
-    throw new Error("Failed to update leave request.");
+    res.status(500).json({ message: "Failed to update leave request." });
   }
 };
 
@@ -76,23 +125,22 @@ export const deleteLeaveRequest = async (req, res) => {
     const leaveRequest = await LeaveRequest.findById(req.params.id);
 
     if (!leaveRequest) {
-      res.status(404);
-      throw new Error("Leave request not found.");
+      return res.status(404).json({ message: "Leave request not found." });
     }
 
     if (
       leaveRequest.user.toString() !== req.user._id.toString() &&
       req.user.role !== "admin"
     ) {
-      res.status(403);
-      throw new Error("Not authorized to delete this leave request.");
+      return res
+        .status(403)
+        .json({ message: "Not authorized to delete this leave request." });
     }
 
     await leaveRequest.deleteOne();
 
     res.status(200).json({ message: "Leave request deleted." });
   } catch (error) {
-    res.status(500);
-    throw new Error("Failed to delete leave request.");
+    res.status(500).json({ message: "Failed to delete leave request." });
   }
 };

@@ -8,26 +8,26 @@ export const register = async (req, res) => {
   const { name, email, password } = req.body;
 
   try {
+    if (!name || !email || !password) {
+      res.status(400);
+      throw new Error("Please fill the required fields.");
+    }
+
+    if (password.length < 8) {
+      res.status(400);
+      throw new Error("Password minimum length is 8 characters.");
+    }
+
+    const exists = await User.findOne({ email });
+
+    if (exists) {
+      res.status(400);
+      throw new Error("Email already registered.");
+    }
+
     const user = new User({ name, email, password });
     await user.save();
-
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: maxAge,
-      }
-    );
-
-    res.cookie("amsJwt", token, {
-      httpOnly: true,
-      maxAge: maxAge * 1000,
-      secure: process.env.NODE_ENV === "production",
-    });
-
-    res
-      .status(201)
-      .json({ user: { id: user._id, name: user.name, email: user.email } });
+    res.status(200).json({ message: "Registration successful" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -39,12 +39,14 @@ export const login = async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      res.status(400);
+      throw new Error("Invalid cEmailredentials.");
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      res.status(400);
+      throw new Error("Invalid credentials.");
     }
 
     const token = jwt.sign(
@@ -70,7 +72,7 @@ export const login = async (req, res) => {
 };
 
 export const logout = async (req, res) => {
-  res.clearCookie("token", {
+  res.clearCookie("amsJwt", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
   });

@@ -7,11 +7,7 @@ const leaveRequestSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    startDate: {
-      type: Date,
-      required: true,
-    },
-    endDate: {
+    date: {
       type: Date,
       required: true,
     },
