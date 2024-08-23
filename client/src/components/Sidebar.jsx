@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { FaSignOutAlt } from "react-icons/fa";
-import { NavLink, redirect } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import {
   FaClipboardList,
   FaChartPie,
@@ -36,14 +36,13 @@ const Sidebar = ({ user, onSelect }) => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    // Call the logout endpoint (assuming you've set up the route)
     fetch("/api/auth/logout", {
       method: "POST",
       credentials: "include",
     })
       .then((response) => {
         if (response.ok) {
-          navigate("/login"); // Redirect to the login page after successful logout
+          navigate("/login");
         } else {
           console.error("Logout failed");
         }
@@ -52,36 +51,42 @@ const Sidebar = ({ user, onSelect }) => {
   };
 
   return (
-    <nav className="flex-1 flex flex-col mt-10 space-y-2">
-      {links.map((link) => {
-        if (link.path === "admin" && user.role !== "admin") {
-          return;
-        }
-        return (
-          <NavLink
-            onClick={onSelect}
-            to={link.path}
-            key={link.text}
-            className={({ isActive }) =>
-              `flex items-center px-4 py-2 text-lg font-medium ${
-                isActive ? "bg-gray-700" : "hover:bg-gray-700"
-              }`
-            }
-            end
-          >
-            <span className="mr-4">{link.icon}</span>
-            {link.text}
-          </NavLink>
-        );
-      })}
+    <nav className="flex flex-col h-full p-4 bg-gray-800 text-white">
+      <div className="flex-1 flex flex-col">
+        {links.map((link) => {
+          if (link.path === "admin" && user.role !== "admin") {
+            return null;
+          }
+          return (
+            <NavLink
+              onClick={onSelect}
+              to={link.path}
+              key={link.text}
+              className={({ isActive }) =>
+                `flex items-center px-4 py-2 font-medium ${
+                  isActive ? "bg-gray-700" : "hover:bg-gray-700"
+                }`
+              }
+              end
+            >
+              <span className="mr-4">{link.icon}</span>
+              {link.text}
+            </NavLink>
+          );
+        })}
+      </div>
 
       <button
         onClick={handleLogout}
-        className="flex items-center px-4 py-2 text-lg font-medium hover:bg-gray-700"
+        className="flex items-center px-4 py-2 font-medium hover:bg-gray-700 mt-2"
       >
         <FaSignOutAlt className="mr-4" />
         Logout
       </button>
+
+      <div className="text-xs text-center text-gray-300 mt-auto">
+        AMS &copy; {new Date().getFullYear()} Sajjad Ahmed
+      </div>
     </nav>
   );
 };
